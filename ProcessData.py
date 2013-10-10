@@ -1,60 +1,11 @@
-import nltk
-import threading
-import _mysql,MySQLdb
+
+import pymongo
+from pymongo import MongoClient
 import os
 import xml.etree.ElementTree as ET
-from nltk import PorterStemmer
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.corpus import stopwords
+import threading
 
-#Globals
-threadLimiter = threading.BoundedSemaphore(1)
-lmtzr = WordNetLemmatizer()
-porter_stem = PorterStemmer()
-wordnet_tag ={'NN':'n','JJ':'a','VB':'v','RB':'r'}
-
-class DataClean:
-    def removeFreqone(self,list):
-        new_list={}
-        for a in list :
-        	try:
-			new_list[a] += 1
-		except:
-			new_list[a] = 0
-	return [a for a in new_list.keys() if new_list[a] > 0]
-
-    def __init__(self,text):
-        data = text.translate(None, '!@#$)(*&^%~`*!{}][;":/.,?><_-+=').lower()
-        tokens = nltk.word_tokenize(data)
-        tagged = nltk.pos_tag(tokens)
-        word_list = []
-        for t in tagged:
-            try:
-                word_list.append(lmtzr.lemmatize(t[0],wordnet_tag[t[1][:2]]))
-            except:
-                word_list.append(porter_stem.stem_word(t[0]))
-
-        self.filtered_words = [w for w in word_list if not w in stopwords.words('english')]
-
-        #Now removal of terms with frequency =1  [ paper mentions about this ]
-        #self.filtered_words = self.removeFreqone(self.filtered_words)
-
-
-    def GetData(self):
-        return self.filtered_words
-
-
-class ParseXml :
-  def __init__(self,text):
-    self.data_raw= " "
-    tree = ET.parse(text)
-    root = tree.getroot()
-    for data in root.findall('text'):
-      for e in data.findall('p'):
-        self.data_raw = self.data_raw + " " +  e.text
-  def GetData(self):
-    return self.data_raw
-
+threadLimiter = threading.BoundedSemaphore(7)
 
 def GetDirList(cur_dir, list):
   for root, dirs, files in os.walk(cur_dir):
@@ -66,52 +17,43 @@ def GetDirList(cur_dir, list):
   return list
 
 
+class ParseXml :
+  def __init__(self,text,name):
+    self.data_raw= " "
+    tree = ET.parse(text)
+    root = tree.getroot()
+    self.file_data = dict()
+    self.file_data['name'] = name
+    for data in root.findall('metadata'):
+      for e in data.findall('codes'):
+        val = []
+        for k in e.findall('code'):
+            val.append(k.get('code'))
+        self.file_data[str(e.get('class'))] = val
+    self.file_data['paragraphs'] = [] 
+    for data in root.findall('text'):
+      for e in data.findall('p'):
+        self.file_data['paragraphs'].append(e.text)
+
+  def GetData(self):
+    return self.file_data
+
 
 class myThread (threading.Thread):
     def __init__(self,path):
         threading.Thread.__init__(self)
         self.path = path
-        try :
-          self.connection = MySQLdb.connect('localhost', 'root', 'kgggdkp2692', 'Mining_text')
-        except Exception as e :
-          self.connection =None
-          print "Unable to connect   :" + str(e)
 
-    def write_db(self,list,list1):
-      x = self.connection.cursor()
-      try:
-        q= "INSERT INTO `data_store`( `path`,`data`) VALUES ('"+self.addslashes(str(list))+"','"+self.addslashes(str(list1))+"')"
-        #print q
-        x.execute(q)
-        self.connection.commit()
-      except Exception as e :
-        print e
-        self.connection.rollback()
-      self.connection.close()
-
-    def addslashes(self,s):
-
-        l = ["\\", '"', "'", "\0", ]
-        for i in l:
-           if i in s:
-             s = s.replace(i, '\\'+i)
-
-        return s
+    def write_db(self,path,list):
+        client = MongoClient()
 
     def run(self):
       threadLimiter.acquire()
       try:
-        #Data =DataClean(ParseXml(self.path).GetData())
-        #print Data.GetData()
-        try :
-          self.write_db(self.path,DataClean(ParseXml(self.path).GetData()).GetData())
-        except MySQLdb.IntegrityError as e :
-          print "Error :: "+Str(e)
-          pass
-        print "Done \n"
+        val = ParseXml(self.path)
+        print val
       finally:
         threadLimiter.release()
-
 
 list =[]
 list = GetDirList(os.getcwd(),list)
@@ -125,12 +67,4 @@ for path in list :
       myThread(path).start()
     finally:
       threadLimiter.release()
-
-
-
-
-
-
-
-
 
