@@ -5,7 +5,13 @@ import os
 import xml.etree.ElementTree as ET
 import threading
 
-threadLimiter = threading.BoundedSemaphore(7)
+threadLimiter = threading.BoundedSemaphore(15)
+
+client = MongoClient()
+db = client['mining']
+collection = db['converted_data']
+data = db.converted_data
+
 
 def GetDirList(cur_dir, list):
   for root, dirs, files in os.walk(cur_dir):
@@ -29,8 +35,8 @@ class ParseXml :
         val = []
         for k in e.findall('code'):
             val.append(k.get('code'))
-        self.file_data[str(e.get('class'))] = val
-    self.file_data['paragraphs'] = [] 
+        self.file_data[str(e.get('class')).translate(None, '!@#$)(*&^%~`*!{}][;":/.,?><_-+=').lower()] = val
+    self.file_data['paragraphs'] = []
     for data in root.findall('text'):
       for e in data.findall('p'):
         self.file_data['paragraphs'].append(e.text)
@@ -44,14 +50,14 @@ class myThread (threading.Thread):
         threading.Thread.__init__(self)
         self.path = path
 
-    def write_db(self,path,list):
-        client = MongoClient()
-
+    def write_db(self,path):
+        data_id = data.insert(path)
+        print data_id
     def run(self):
       threadLimiter.acquire()
       try:
         val = ParseXml(self.path)
-        print val
+        self.write_db(val.GetData())
       finally:
         threadLimiter.release()
 
