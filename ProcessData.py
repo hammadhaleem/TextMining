@@ -18,12 +18,12 @@ def GetDirList(cur_dir, list):
 
 
 class ParseXml :
-  def __init__(self,text,name):
+  def __init__(self,text):
     self.data_raw= " "
     tree = ET.parse(text)
     root = tree.getroot()
     self.file_data = dict()
-    self.file_data['name'] = name
+    self.file_data['name'] = text
     for data in root.findall('metadata'):
       for e in data.findall('codes'):
         val = []
