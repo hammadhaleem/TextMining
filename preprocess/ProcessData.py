@@ -1,15 +1,14 @@
-
 import pymongo
 from pymongo import MongoClient
 import os
 import xml.etree.ElementTree as ET
 import threading
+import time
 
-threadLimiter = threading.BoundedSemaphore(15)
+threadLimiter = threading.BoundedSemaphore(5)
 
 client = MongoClient()
-db = client['mining']
-collection = db['converted_data']
+db = client['text_mining']
 data = db.converted_data
 
 
@@ -52,7 +51,7 @@ class myThread (threading.Thread):
 
     def write_db(self,path):
         data_id = data.insert(path)
-        print data_id
+        print ( data_id ,"\n")
     def run(self):
       threadLimiter.acquire()
       try:
@@ -63,14 +62,25 @@ class myThread (threading.Thread):
 
 list =[]
 list = GetDirList(os.getcwd(),list)
-print "Total Treads " + str(len(list))
+print ( "Total Treads " + str(len(list)))
 count = 0
 for path in list :
-    print path + "\t"+str(count)
+    print ( path + "\t"+str(count))
     count =count +1
     threadLimiter.acquire()
     try :
       myThread(path).start()
+    except Exception as e :
+      print ( e)
+      pass
     finally:
       threadLimiter.release()
+    if count % 30000 == 0 :
+        print "\t\t\tWaiting for 15 "
+        time.sleep(15)
+
+
+
+
+
 
