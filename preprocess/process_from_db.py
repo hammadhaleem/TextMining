@@ -3,6 +3,7 @@ from pymongo import MongoClient
 import os
 import threading
 import time
+import nltk
 from nltk import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -13,14 +14,27 @@ client = MongoClient()
 db = client['text_mining']
 data = db.converted_data
 
+
+db2 = client['text_mining_data']
+data2 = db2.converted_data
+
 lmtzr = WordNetLemmatizer()
 porter_stem = PorterStemmer()
 wordnet_tag ={'NN':'n','JJ':'a','VB':'v','RB':'r'}
 
 class DataClean:
-    
+
+    def removeFreqone(self,list):
+        new_list={}
+        for a in list :
+            try:
+            new_list[a] += 1
+        except:
+            new_list[a] = 0
+    return [a for a in new_list.keys() if new_list[a] > 0]
+
     def __init__(self,text):
-        data = text.translate('!@#$)(*&^%~`*!{}][;":/.,?><_-+=').lower()
+        data = text.lower()
         tokens = nltk.word_tokenize(data)
         tagged = nltk.pos_tag(tokens)
         word_list = []
@@ -33,7 +47,7 @@ class DataClean:
         self.filtered_words = [w for w in word_list if not w in stopwords.words('english')]
 
         #Now removal of terms with frequency =1  [ paper mentions about this ]
-        #self.filtered_words = self.removeFreqone(self.filtered_words)
+        self.filtered_words = self.removeFreqone(self.filtered_words)
 
 
     def GetData(self):
@@ -48,12 +62,12 @@ class myThread (threading.Thread):
 
     def write_db(self):
         for i in self.element['paragraphs']:
-          self.para =self.para + " " + i 
-         
-        self.element['keywords'] = DataClean(self.para).GetData()
-        data_id = data.insert(path)
-        #print self.element 
-        print data_id 
+          self.para =self.para + " " + i
+
+        self.element['keywords'] = DataClean(str(self.para)).GetData()
+        data_id = data2.insert(self.element)
+        #print self.element
+        print data_id
     def run(self):
       threadLimiter.acquire()
       try:
@@ -77,4 +91,4 @@ for element in all_data:
     if count % 30000 == 0 :
         print "\t\t\tWaiting for 15 "
         time.sleep(15)
-    print count 
+    print count
