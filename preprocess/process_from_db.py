@@ -8,7 +8,7 @@ from nltk import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords
 
-threadLimiter = threading.BoundedSemaphore(5)
+threadLimiter = threading.BoundedSemaphore(4)
 
 client = MongoClient()
 db = client['text_mining']
@@ -28,10 +28,10 @@ class DataClean:
         new_list={}
         for a in list :
             try:
-            new_list[a] += 1
-        except:
-            new_list[a] = 0
-    return [a for a in new_list.keys() if new_list[a] > 0]
+                new_list[a] += 1
+            except:
+                new_list[a] = 0
+        return [a for a in new_list.keys() if new_list[a] > 0]
 
     def __init__(self,text):
         data = text.lower()
