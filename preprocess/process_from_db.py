@@ -1,0 +1,80 @@
+import pymongo
+from pymongo import MongoClient
+import os
+import threading
+import time
+from nltk import PorterStemmer
+from nltk.stem.wordnet import WordNetLemmatizer
+from nltk.corpus import stopwords
+
+threadLimiter = threading.BoundedSemaphore(5)
+
+client = MongoClient()
+db = client['text_mining']
+data = db.converted_data
+
+lmtzr = WordNetLemmatizer()
+porter_stem = PorterStemmer()
+wordnet_tag ={'NN':'n','JJ':'a','VB':'v','RB':'r'}
+
+class DataClean:
+    
+    def __init__(self,text):
+        data = text.translate('!@#$)(*&^%~`*!{}][;":/.,?><_-+=').lower()
+        tokens = nltk.word_tokenize(data)
+        tagged = nltk.pos_tag(tokens)
+        word_list = []
+        for t in tagged:
+            try:
+                word_list.append(lmtzr.lemmatize(t[0],wordnet_tag[t[1][:2]]))
+            except:
+                word_list.append(porter_stem.stem_word(t[0]))
+
+        self.filtered_words = [w for w in word_list if not w in stopwords.words('english')]
+
+        #Now removal of terms with frequency =1  [ paper mentions about this ]
+        #self.filtered_words = self.removeFreqone(self.filtered_words)
+
+
+    def GetData(self):
+        return self.filtered_words
+
+
+class myThread (threading.Thread):
+    def __init__(self,element):
+        threading.Thread.__init__(self)
+        self.element = element
+        self.para = " "
+
+    def write_db(self):
+        for i in self.element['paragraphs']:
+          self.para =self.para + " " + i 
+         
+        self.element['keywords'] = DataClean(self.para).GetData()
+        data_id = data.insert(path)
+        #print self.element 
+        print data_id 
+    def run(self):
+      threadLimiter.acquire()
+      try:
+        self.write_db()
+      finally:
+        threadLimiter.release()
+
+
+count = 0
+all_data =data.find()
+for element in all_data:
+    count =count +1
+    threadLimiter.acquire()
+    try :
+      myThread(element).start()
+    except Exception as e :
+      print (e)
+      pass
+    finally:
+      threadLimiter.release()
+    if count % 30000 == 0 :
+        print "\t\t\tWaiting for 15 "
+        time.sleep(15)
+    print count 
