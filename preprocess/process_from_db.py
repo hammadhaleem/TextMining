@@ -1,3 +1,4 @@
+
 import pymongo
 from pymongo import MongoClient
 import os
@@ -8,9 +9,8 @@ from nltk import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords
 
-threadLimiter = threading.BoundedSemaphore(4)
 
-client = MongoClient()
+client = MongoClient('192.184.92.23')
 db = client['text_mining']
 data = db.converted_data
 
@@ -63,32 +63,23 @@ class myThread (threading.Thread):
     def write_db(self):
         for i in self.element['paragraphs']:
           self.para =self.para + " " + i
-
         self.element['keywords'] = DataClean(str(self.para)).GetData()
         data_id = data2.insert(self.element)
-        #print self.element
         print data_id
     def run(self):
-      threadLimiter.acquire()
       try:
         self.write_db()
-      finally:
-        threadLimiter.release()
-
+      except Exception as e :
+        print e 
 
 count = 0
 all_data =data.find()
+print all_data
 for element in all_data:
     count =count +1
-    threadLimiter.acquire()
-    try :
-      myThread(element).start()
-    except Exception as e :
-      print (e)
-      pass
-    finally:
-      threadLimiter.release()
-    if count % 30000 == 0 :
-        print "\t\t\tWaiting for 15 "
-        time.sleep(15)
+    if count > 0:
+        try :
+          myThread(element).start()
+        except Exception as e :
+          print (e)
     print count
