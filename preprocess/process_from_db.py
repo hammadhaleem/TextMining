@@ -9,6 +9,7 @@ from nltk import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import stopwords
 
+threadLimiter = threading.BoundedSemaphore(14)
 
 client = MongoClient('192.184.92.23')
 db = client['text_mining']
@@ -47,6 +48,7 @@ class DataClean:
         self.filtered_words = [w for w in word_list if not w in stopwords.words('english')]
 
         #Now removal of terms with frequency =1  [ paper mentions about this ]
+        print self.filtered_words 
         self.filtered_words = self.removeFreqone(self.filtered_words)
 
 
@@ -63,23 +65,33 @@ class myThread (threading.Thread):
     def write_db(self):
         for i in self.element['paragraphs']:
           self.para =self.para + " " + i
+
         self.element['keywords'] = DataClean(str(self.para)).GetData()
         data_id = data2.insert(self.element)
+        #print self.element
         print data_id
     def run(self):
+      threadLimiter.acquire()
       try:
         self.write_db()
-      except Exception as e :
-        print e 
+      finally:
+        threadLimiter.release()
+
 
 count = 0
 all_data =data.find()
-print all_data
 for element in all_data:
     count =count +1
     if count > 0:
+        threadLimiter.acquire()
         try :
           myThread(element).start()
         except Exception as e :
           print (e)
+          pass
+        finally:
+          threadLimiter.release()
+        if count % 300 == 0 :
+            print "\t\t\tWaiting for 15 "
+            time.sleep(15)
     print count
