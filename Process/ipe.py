@@ -85,9 +85,9 @@ def find_Dnd(nd, DP ):
 
 def composition ( np , pattern ):
 	d =dict()
-	for term, weight in np :
+	for term, weight in np.iteritems() :
 		d[term] = int (weight)
-	for term,weight in pattern :
+	for term,weight in pattern.iteritems() :
 		if d.has_key(term):
 			d[term] = int(d[term])+int(weight)
 		else :
@@ -130,7 +130,6 @@ def IPE(D,DP,u,threshold):
 		print "Counter:" , count  
 		if weight(nd) >= threshold:
 			Dnd = find_Dnd(nd,DP)
-			#print "Dnd",  Dnd 
 		NDP = suffling(nd,Dnd,NDP,u)
 		print weight(nd) , threshold
 		for pattern in NDP :
@@ -197,7 +196,6 @@ for row in rows:
 			sum = c + sum 
 		if sum <  threshold :
 			threshold = sum
-			print sum , threshold ,count
 		ls=d
 		dp.append(ls)
 	
