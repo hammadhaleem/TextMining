@@ -14,18 +14,18 @@ def getsum1(t,p):
 	for i in t :
 		c+=1
 		for k,v in p.iteritems() :
-			
+
 			if i == k:
 				sum1 =sum1+v
 	return sum1*c
 
 def getsum2(t,p,sum_intersection):
-	sum1 = 0.0 
-	c= 0 
+	sum1 = 0.0
+	c= 0
 	for i,j in p.iteritems() :
 		sum1 =sum1+j
 		c+=1
-	
+
 	sum1 =2.0*sum1*c - sum_intersection
 	return sum1
 
@@ -56,16 +56,16 @@ def suffling(nd , Dnd , NDP,u ):
 			var = getsum1( termset, p )
 			fl = 1.0/u
 			offering = ( 1.0 - fl )* var
-			base = getsum2(t,p,var)			
+			base = getsum2(t,p,var)
 			l = []
-			
+
 			for key,val in p.iteritems() :
 				if key in nd :
 					p[key] = (1.0/u)*p[key] #shrink
 				else:
 					p[key] = p[key]*(1.0+offering / base )
 				l.append(p)
-			
+
 			new_NDP.append(l)
 	return new_NDP
 
@@ -82,17 +82,26 @@ def find_Dnd(nd, DP ):
 				Dnd.append(pattern)
 				DP.remove(pattern)
 	return Dnd
-
+import time
 def composition ( np , pattern ):
 	d =dict()
+	count = 0
 	for term, weight in np.iteritems() :
-		d[term] = int (weight)
-	for term,weight in pattern.iteritems() :
-		if d.has_key(term):
-			d[term] = int(d[term])+int(weight)
-		else :
-			d[term] =int(weight)
+		d[term] = weight
+	for i in pattern :
+		try :
+			for term,weight in i.iteritems() :
+				if d.has_key(term):
+					d[term] = d[term]+weight
+				else :
+					d[term] =weight
+		except :
+			pass
+
 	return d
+
+
+
 def Threshold(DP):
 	min= 9999
 	l =[]
@@ -105,54 +114,38 @@ def Threshold(DP):
 			l = pattern
 	return min
 def weight(list):
-
 	d = dict()
 	w=0
-	count = 0 
-	for word in list : 
-		count =count + 1 
+	count = 0
+	for word in list :
+		count =count + 1
 		try:
 			d[word]= d[word]+1
 		except:
-			d[word] = 1 
+			d[word] = 1
 	for key,value  in d.iteritems():
 		w=w+value
-	return w 
+	return w
 
 def IPE(D,DP,u,threshold):
 	np = dict()
+	Dnd = []
 	NDP = DP #in our case, we have already normalized all D patterns
-	count = 0 
+	count = 0
 	for v in D['neg']:
 		d = str(v)
 		nd = d.replace('[', '').replace("]", '').replace(' ','').split(",")
-		count =count + 1 
-		print "Counter:" , count  
-		if weight(nd) >= threshold:
+		count =count + 1
+		print "Counter:" , count
+		if weight(nd) >=  threshold:
 			Dnd = find_Dnd(nd,DP)
 		NDP = suffling(nd,Dnd,NDP,u)
 		print weight(nd) , threshold
 		for pattern in NDP :
 			np = composition(np,pattern)
-		if (count % 20 )== 0 : 
-			print np 
+		if (count % 20 )== 0 :
+			print np
 	return np
-
-# Format [list of list]
-#NDP =[ [[1,2],[2,3],[3]] , [[1,2],[2,3],[3]],  [[1,2],[2,3],[3]]]
-def dict_to_list(dic):
-	k = []
-	for key,value  in dic.iteritems():
-		k.append([key,value])
-	return k
-def convert (lis):
-	lis1= []
-	for i in lis :
-		for j in i :
-			lis1.append(str(j))
-	return lis1
-
-
 
 connection = MySQLdb.connect('localhost', 'root', 'kgggdkp2692', 'mining')
 cursor = connection.cursor()
@@ -169,40 +162,39 @@ D= dict()
 D['neg'] = []
 D['pos'] = []
 dp=[]
+threshold = 9999
+for row in rows:
 
-threshold = 9999 
-for row in rows:	
+	d=dict()
 	try :
 		var = row[4].replace("'", "\"")
 		d= json.loads(var)
 	except :
-		d = ""
+		d = {}
 
 	stri = row[3].replace('"', '').replace("'", '')
 	stri.split(' ')
 	if row[2] == 'neg' :
-		D['neg'].append (stri)
+		D['neg'].append(stri)
 	else:
 		D['pos'].append(stri)
 
 	if len(d) > 10 :
 		nd = stri.replace('[', '').replace("]", '').replace(' ','').split(",")
-		count = 0 
+		dp.append(d)
+		count = 0
 		for i in nd :
-			count =count +1 
+			count =count +1
 		sum = 0.0
 		for key,value in d.iteritems():
 			c =value*count
-			sum = c + sum 
+			sum = c + sum
 		if sum <  threshold :
 			threshold = sum
-		ls=d
-		dp.append(ls)
-	
-	#print  dp,D,u
 
 pattern = IPE(D,dp,20,threshold)
 print pattern
+
 
 
 
