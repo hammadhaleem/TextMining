@@ -220,9 +220,15 @@ for row in rows:
 		count = 0
 		for i in nd :
 			count =count +1
-		
+pairs={}		
 threshold,Lisi=Threshold(dp)
-pattern = IPE(D,dp,2)
+pairs = IPE(D,dp,2)
+fo = open("output.txt", "w+")
+print "Name of the file: ", fo.name
+od = collections.OrderedDict(sorted(pairs.items()))
+for key,value in od.iteritems():
+	fo.write(str(key)+":"+str(value)+"\n")
+fo.close()
 
 
 
