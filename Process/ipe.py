@@ -2,6 +2,8 @@ import os
 import threading
 import time
 import MySQLdb
+import collections
+
 
 def getTextSet(p):
 	l=[]
@@ -9,25 +11,26 @@ def getTextSet(p):
 		l.append(key)
 	return l
 def getsum1(t,p):
-	sum1 = 0.0
-	c= 0
-	for i in t :
-		c+=1
-		for k,v in p.iteritems() :
+        sum1 = 0.0
+        c= 0
+        for i in t :
+                c+=1
+                for k,v in p.iteritems() :
 
-			if i == k:
-				sum1 =sum1+v
-	return sum1*c
+                        if i == k:
+                                sum1 =sum1+v
+        return sum1*c
 
 def getsum2(t,p,sum_intersection):
-	sum1 = 0.0
-	c= 0
-	for i,j in p.iteritems() :
-		sum1 =sum1+j
-		c+=1
+        sum1 = 0.0
+        c= 0
+        for i,j in p.iteritems() :
+                sum1 =sum1+j
+                c+=1
 
-	sum1 =2.0*sum1*c - sum_intersection
-	return sum1
+        sum1 =2.0*sum1*c - sum_intersection
+        return sum1
+
 
 def remove_pattern(NDP,p):
 	try :
@@ -58,7 +61,6 @@ def suffling(nd , Dnd , NDP,u ):
 			offering = ( 1.0 - fl )* var
 			base = getsum2(t,p,var)
 			l = []
-
 			for key,val in p.iteritems() :
 				if key in nd :
 					p[key] = (1.0/u)*p[key] #shrink
@@ -103,48 +105,65 @@ def composition ( np , pattern ):
 
 
 def Threshold(DP):
-	min= 9999
-	l =[]
+	d={}
+	var =999.0
 	for pattern in DP :
-		sum = 0
-		for a,weight in pattern :
-			sum =sum +weight
-		if sum < min :
-			min = sum
-			l = pattern
-	return min
-def weight(list):
-	d = dict()
-	w=0
-	count = 0
-	for word in list :
-		count =count + 1
-		try:
-			d[word]= d[word]+1
-		except:
-			d[word] = 1
-	for key,value  in d.iteritems():
-		w=w+value
-	return w
+		for a,weight in pattern.iteritems() :
+			
+			if d.has_key(a):
+				d[a]=d[a]+weight
+				if (var >= d[a]):
+					var =d[a]
+			else:
+				d[a]=weight
+				if (var >= d[a]):
+					var =d[a]
+	return var,d
 
-def IPE(D,DP,u,threshold):
+def weight(lis,s):
+	count = 0.0
+	l=[]
+	for word in lis :
+		if word in l :
+			pass
+		else:
+			l.append(word)
+	for w in l :
+		if w in s :
+			count = count + s[w]			
+	return count
+
+def IPE(D,DP,u):
 	np = dict()
 	Dnd = []
 	NDP = DP #in our case, we have already normalized all D patterns
 	count = 0
+	threshold =0.0
+	threshold,Lis=Threshold(DP)
+	Lisi=Lis
+	print threshold
+
 	for v in D['neg']:
 		d = str(v)
 		nd = d.replace('[', '').replace("]", '').replace(' ','').split(",")
 		count =count + 1
-		print "Counter:" , count
-		if weight(nd) >=  threshold:
+		
+		wei = weight(nd,Lis)
+		if wei >=  threshold:
 			Dnd = find_Dnd(nd,DP)
-		NDP = suffling(nd,Dnd,NDP,u)
-		print weight(nd) , threshold
+		print "Counter:" , count ,"Weight :" ,  wei , "Threshold : " , threshold
+		
+		NDP = suffling(nd,Dnd,NDP,u,)
 		for pattern in NDP :
 			np = composition(np,pattern)
 		if (count % 20 )== 0 :
-			print np
+			fo = open("output.txt", "w+")
+			print "Name of the file: ", fo.name
+			od = collections.OrderedDict(sorted(np.items()))
+			for key,value in od.iteritems():
+				fo.write(str(key)+":"+str(value)+"\n")
+			fo.close()
+
 	return np
 
 connection = MySQLdb.connect('localhost', 'root', 'kgggdkp2692', 'mining')
@@ -163,6 +182,7 @@ D['neg'] = []
 D['pos'] = []
 dp=[]
 threshold = 9999
+Lisi={}
 for row in rows:
 
 	d=dict()
@@ -185,15 +205,10 @@ for row in rows:
 		count = 0
 		for i in nd :
 			count =count +1
-		sum = 0.0
-		for key,value in d.iteritems():
-			c =value*count
-			sum = c + sum
-		if sum <  threshold :
-			threshold = sum
+		
 
-pattern = IPE(D,dp,20,threshold)
-print pattern
+pattern = IPE(D,dp,2)
+
 
 
 
