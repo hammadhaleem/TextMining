@@ -3,7 +3,7 @@ import threading
 import time
 import MySQLdb
 import collections
-
+Lisi={}
 
 def getTextSet(p):
 	l=[]
@@ -13,22 +13,38 @@ def getTextSet(p):
 def getsum1(t,p):
         sum1 = 0.0
         c= 0
+	l=[]
+	for k in t :
+		if k in l:
+			pass
+		else:
+			l.append(k)
+	t=l 
         for i in t :
                 c+=1
                 for k,v in p.iteritems() :
-
                         if i == k:
-                                sum1 =sum1+v
+                                sum1 =sum1+Lisi[k]
         return sum1*c
 
 def getsum2(t,p,sum_intersection):
         sum1 = 0.0
         c= 0
-        for i,j in p.iteritems() :
-                sum1 =sum1+j
-                c+=1
+	l=[]
+	for k in t :
+		if k in l:
+			pass
+		else:
+			l.append(k)
+	t=l 
+	for i in t :
+		c+=1
+        	for k,j in p.iteritems() :
+			
+			if i == k:
+                                sum1 =sum1+Lisi[k]                	
 
-        sum1 =2.0*sum1*c - sum_intersection
+        sum1 = sum1*c - sum_intersection
         return sum1
 
 
@@ -140,7 +156,6 @@ def IPE(D,DP,u):
 	count = 0
 	threshold =0.0
 	threshold,Lis=Threshold(DP)
-	Lisi=Lis
 	print threshold
 
 	for v in D['neg']:
@@ -182,7 +197,7 @@ D['neg'] = []
 D['pos'] = []
 dp=[]
 threshold = 9999
-Lisi={}
+
 for row in rows:
 
 	d=dict()
@@ -206,7 +221,7 @@ for row in rows:
 		for i in nd :
 			count =count +1
 		
-
+threshold,Lisi=Threshold(dp)
 pattern = IPE(D,dp,2)
 
 
